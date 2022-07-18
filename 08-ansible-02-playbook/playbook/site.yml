@@ -1,0 +1,58 @@
+---
+- name: Install Clickhouse
+  hosts: vector
+  handlers:
+    - name: Start clickhouse service
+      become: true
+      ansible.builtin.service:
+        name: clickhouse-server
+        state: restarted
+  tasks:
+    - block:
+        - name: Get clickhouse distrib
+          ansible.builtin.get_url:
+            url: "https://packages.clickhouse.com/deb/pool/stable/{{ item }}_{{ clickhouse_version }}_amd64.deb"
+            dest: "./{{ item }}_{{ clickhouse_version }}_amd64.deb"
+            mode: 0755
+          loop: "{{ clickhouse_packages | list }}"
+      rescue:
+        - name: Get clickhouse distrib
+          ansible.builtin.get_url:
+            url: "https://packages.clickhouse.com/deb/pool/stable/clickhouse-common-static_{{ clickhouse_version }}_amd64.deb"
+            dest: "./clickhouse-common-static_{{ clickhouse_version }}_amd64.deb"
+            mode: 0755
+    - name: Install clickhouse packages
+      become: true
+      become_method: su
+      ansible.builtin.apt:
+        deb: "/{{ item }}"
+      loop:
+        - clickhouse-common-static_{{ clickhouse_version }}_amd64.deb
+        - clickhouse-client_{{ clickhouse_version }}_amd64.deb
+        - clickhouse-server_{{ clickhouse_version }}_amd64.deb
+#      notify: Start clickhouse service
+    - name: Start clickhouse
+      ansible.builtin.command: "clickhouse start"
+      register: clh
+      failed_when: clh.rc != 0 and clh.rc !=2
+      changed_when: clh.rc == 0
+
+- name: Install Vector
+  hosts: vector
+  tasks:
+    - block:
+        - name: Get vector distrib
+          ansible.builtin.get_url:
+            url: "https://packages.timber.io/vector/0.23.0/vector_{{ vector_version }}_amd64.deb"
+            dest: "./vector_{{ vector_version }}_amd64.deb"
+            mode: 0755
+    - name: Install vector packages
+      become: true
+      become_method: su
+      ansible.builtin.apt:
+        deb: https://packages.timber.io/vector/0.23.0/vector_{{ vector_version }}_amd64.deb
+    - name: Template a file to /etc/vector/
+      ansible.builtin.template:
+        src: vector.toml
+        dest: /etc/vector/vector.toml
+        mode: '0644'

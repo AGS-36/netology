@@ -1,0 +1,12 @@
+---
+clickhouse:
+  hosts:
+    homework:
+#      ansible_host: "192.168.56.150"
+      ansible_connection: docker
+
+vector:
+  hosts:
+    homework:
+      ansible_connection: docker
+#      ansible_host: "192.168.56.150"

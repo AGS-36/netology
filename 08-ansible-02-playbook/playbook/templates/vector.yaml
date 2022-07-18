@@ -1,0 +1,27 @@
+---
+sources:
+  my_source_id:
+    type: demo_logs
+    format: shuffle
+
+transforms:
+  my_transform_id:
+    type: sample
+    inputs:
+      - my-source-or-transform-id
+    exclude: null
+    rate: 10
+
+sinks:
+  my_sink_id:
+    type: clickhouse
+    inputs:
+      - my-source-or-transform-id
+    database: logs
+    endpoint: http://localhost:8123
+    table: mytable
+    acknowledgements: null
+    compression: gzip
+    encoding: null
+    healthcheck: null
+    skip_unknown_fields: null
