@@ -1,0 +1,107 @@
+---
+- name: Install Clickhouse on Debian
+  hosts: clickhouse
+  handlers:
+    - name: Start clickhouse service
+      become: true
+      ansible.builtin.service:
+        name: clickhouse-server
+        state: restarted
+  tasks:
+    - block:
+        - name: Get clickhouse distrib
+          ansible.builtin.get_url:
+            url: "https://packages.clickhouse.com/deb/pool/stable/{{ item }}_{{ clickhouse_version }}_amd64.deb"
+            dest: "./{{ item }}_{{ clickhouse_version }}_amd64.deb"
+            mode: 0755
+          loop: "{{ clickhouse_packages | list }}"
+      rescue:
+        - name: Get clickhouse distrib
+          ansible.builtin.get_url:
+            url: "https://packages.clickhouse.com/deb/pool/stable/clickhouse-common-static_{{ clickhouse_version }}_amd64.deb"
+            dest: "./clickhouse-common-static_{{ clickhouse_version }}_amd64.deb"
+            mode: 0755
+    - name: Install clickhouse packages
+      become: true
+#      become_method: su
+      ansible.builtin.apt:
+        deb: "/home/rod/{{ item }}"
+      loop:
+        - clickhouse-common-static_{{ clickhouse_version }}_amd64.deb
+        - clickhouse-client_{{ clickhouse_version }}_amd64.deb
+        - clickhouse-server_{{ clickhouse_version }}_amd64.deb
+#      notify: Start clickhouse service
+    - name: Template a file to /etc/clickhouse-server
+      become: true
+      ansible.builtin.template:
+        src: config.clickhouse
+        dest: /etc/clickhouse-server/config.xml
+        mode: 777
+    - name: Start clickhouse
+      #ansible.builtin.command: "clickhouse start"
+      #register: clh
+      #failed_when: clh.rc != 0 and clh.rc !=2
+      #changed_when: clh.rc == 0
+      become: true
+      ansible.builtin.service:
+        name: clickhouse-server
+        state: started
+    - name: Create database
+      ansible.builtin.command: "clickhouse-client -q 'create database logs;'"
+      register: create_db
+      failed_when: create_db.rc != 0 and create_db.rc !=82
+      changed_when: create_db.rc == 0
+
+- name: Install lighthouse on Debian
+  hosts: lighthouse
+  handlers:
+    - name: restart nginx
+      become: true
+      ansible.builtin.service:
+        name: nginx
+        state: restarted
+  tasks:
+    - block:
+      - name: Install nginx from the official repository 
+        become: true
+        ansible.builtin.apt:
+          name: nginx
+          state: present
+      - name: Install git
+        become: true
+        ansible.builtin.apt:
+          name: git
+          state: present
+      - name: Template a file to /etc/nginx/sites-enabled/default
+        become: true
+        ansible.builtin.template:
+          src: default.nginx
+          dest: /etc/nginx/sites-enabled/default
+          mode: 777
+      - name: Get lighthouse
+        become: true
+        ansible.builtin.git:
+          repo: "https://github.com/VKCOM/lighthouse.git"
+          dest: /var/www/lighthouse
+        notify: restart nginx
+
+- name: Install Vector
+  hosts: vector
+  tasks:
+    - block:
+        - name: Get vector distrib
+          ansible.builtin.get_url:
+            url: "https://packages.timber.io/vector/0.23.0/vector_{{ vector_version }}_amd64.deb"
+            dest: "./vector_{{ vector_version }}_amd64.deb"
+            mode: 0755
+    - name: Install vector packages
+      become: true
+#      become_method: su
+      ansible.builtin.apt:
+        deb: https://packages.timber.io/vector/0.23.0/vector_{{ vector_version }}_amd64.deb
+    - name: Template a file to /etc/vector/
+      become: true
+      ansible.builtin.template:
+        src: vector.toml
+        dest: /etc/vector/vector.toml
+        mode: '0644'

@@ -1,0 +1,17 @@
+---
+clickhouse:
+  hosts:
+    clickhouse_01:
+      ansible_host: "51.250.94.60"
+      remote_user: rod
+
+vector:
+  hosts:
+    vector_01:
+#      ansible_connection: docker
+      ansible_host: "51.250.73.207"
+
+lighthouse:
+  hosts:
+    lighthouse_01:
+      ansible_host: "51.250.91.91"
