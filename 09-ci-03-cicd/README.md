@@ -131,7 +131,7 @@ INFO: Final Memory: 8M/40M
 INFO: ------------------------------------------------------------------------
 ```
 
-![image](https://github.com/AGS-36/netology/09-ci-03-cicd/1.png)
+![image](https://github.com/AGS-36/netology/blob/master/09-ci-03-cicd/1.png)
 
 ## Знакомство с Nexus
 
